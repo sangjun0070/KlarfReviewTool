@@ -133,6 +133,56 @@ namespace KlarfReviewTool
             }
         }
 
+        private void FilesListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var listView = sender as System.Windows.Controls.ListView;
+            if (listView?.SelectedItem is FileInfo selectedFile)
+            {
+                var viewModel = DataContext as MainViewModel;
+                if (viewModel != null)
+                {
+                    // Klarf 파일인지 확인 (확장자가 없거나 특정 확장자를 가진 파일)
+                    string fileName = selectedFile.Name.ToLower();
+                    string extension = selectedFile.Extension.ToLower();
+                    
+                    // Klarf 파일은 보통 확장자가 없거나 .klarf, .001 등의 확장자를 가짐
+                    // 또는 파일 내용으로 판단 (첫 줄에 "FileVersion"이 있으면 Klarf 파일)
+                    bool isKlarfFile = string.IsNullOrEmpty(extension) || 
+                                       extension == ".001" || 
+                                       extension == ".klarf" ||
+                                       fileName.Contains("klarf") ||
+                                       fileName.Contains("format");
+                    
+                    if (isKlarfFile || IsKlarfFormatFile(selectedFile.FullName))
+                    {
+                        viewModel.OpenKlarfFile(selectedFile.FullName);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"선택한 파일은 Klarf 형식이 아닙니다.\n\n파일: {selectedFile.Name}", 
+                                      "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+        }
+
+        private bool IsKlarfFormatFile(string filePath)
+        {
+            try
+            {
+                // 파일의 첫 줄을 읽어서 "FileVersion"으로 시작하는지 확인
+                using (var reader = new StreamReader(filePath))
+                {
+                    string firstLine = reader.ReadLine();
+                    return !string.IsNullOrEmpty(firstLine) && firstLine.TrimStart().StartsWith("FileVersion");
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName)

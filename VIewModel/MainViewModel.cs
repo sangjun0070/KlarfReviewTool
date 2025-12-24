@@ -25,7 +25,7 @@ namespace KlarfReviewTool
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        public string tiffFilePath = @"D:\source\3차 과제\Klarf\Klarf Format.tif";
+        public string tiffFilePath = @"C:\psj\ATI\KlarfReviewTool\Klarf\Klarf Format.tif";
 
         public Defectlist DefectList { get; set; } = new Defectlist();
         public Dielist DieList { get; set; } = new Dielist();
@@ -289,6 +289,96 @@ namespace KlarfReviewTool
             }
         }
 
+        public void OpenKlarfFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                MessageBox.Show($"파일을 찾을 수 없습니다:\n{filePath}", "오류");
+                return;
+            }
+
+            try
+            {
+                // Klarf 파일 읽기
+                string[] lines = File.ReadAllLines(filePath);
+                
+                // TiffFilename 추출
+                string tiffFilename = ExtractTiffFilename(lines);
+                string klarfDirectory = Path.GetDirectoryName(filePath);
+                string foundTiffPath = null;
+                
+                if (!string.IsNullOrEmpty(tiffFilename))
+                {
+                    // Klarf 파일과 같은 디렉토리에서 Tiff 파일 찾기
+                    foundTiffPath = Path.Combine(klarfDirectory, tiffFilename);
+                    
+                    if (!File.Exists(foundTiffPath))
+                    {
+                        // Klarf 하위 폴더에서 찾기
+                        string klarfFolder = Path.Combine(klarfDirectory, "Klarf");
+                        if (Directory.Exists(klarfFolder))
+                        {
+                            string altPath = Path.Combine(klarfFolder, tiffFilename);
+                            if (File.Exists(altPath))
+                            {
+                                foundTiffPath = altPath;
+                            }
+                        }
+                    }
+                }
+                
+                // 기존 데이터 초기화
+                DefectList.Defects.Clear();
+                DieList.Dies.Clear();
+                
+                // 파싱
+                Tool.ParseDefects(lines, DefectList);
+                Tool.ParseDies(lines, DieList, DefectList);
+                var (gridWidth, gridHeight) = Tool.GetGridSize(DieList);
+                Tool.Coordinates(DieList, DefectList);
+                
+                // Tiff 파일 경로 업데이트
+                if (!string.IsNullOrEmpty(foundTiffPath) && File.Exists(foundTiffPath))
+                {
+                    tiffFilePath = foundTiffPath;
+                }
+                
+                // 웨이퍼 맵 그리기
+                DrawWaferMap();
+                
+                // 첫 번째 Defect 이미지 표시
+                if (DefectList.Defects.Count > 0)
+                {
+                    int defectID = DefectList.Defects[0].DefectID;
+                    if (!string.IsNullOrEmpty(tiffFilePath) && File.Exists(tiffFilePath))
+                    {
+                        ImageSource = Tool.DefectIDandFrameIndex(DefectList, tiffFilePath, defectID);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"파일을 읽는 중 오류가 발생했습니다:\n{ex.Message}", "오류");
+            }
+        }
+
+        private string ExtractTiffFilename(string[] lines)
+        {
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("TiffFilename"))
+                {
+                    string[] parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2)
+                    {
+                        string filename = parts[1].TrimEnd(';');
+                        return filename;
+                    }
+                }
+            }
+            return null;
+        }
+
 
         public void SaveFile_Click(object obj)
         {
@@ -417,9 +507,45 @@ namespace KlarfReviewTool
             CurrentDefectInDieInfo = TotalDefectCount > 0 ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}" : " ";
         }
 
+        // 원하는 폴더 경로들을 여기에 설정하세요
+        // 여러 폴더를 지정하려면 배열에 추가하세요
+        private string[] _targetFolderPaths = new string[]
+        {
+            @"C:\psj\ATI"
+        };
+
         public void LoadDrives()
         {
             Drives.Clear();
+            
+            // 특정 폴더들만 로드
+            if (_targetFolderPaths != null && _targetFolderPaths.Length > 0)
+            {
+                foreach (var folderPath in _targetFolderPaths)
+                {
+                    if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                    {
+                        var folderItem = new FolderItem(folderPath);
+                        LoadSubFolders(folderItem);
+                        Drives.Add(folderItem);
+                    }
+                }
+                
+                // 지정된 폴더가 없으면 모든 드라이브 로드
+                if (Drives.Count == 0)
+                {
+                    LoadAllDrives();
+                }
+            }
+            else
+            {
+                // 기존 방식: 모든 드라이브 로드
+                LoadAllDrives();
+            }
+        }
+
+        private void LoadAllDrives()
+        {
             foreach (var drive in DriveInfo.GetDrives())
             {
                 if (drive.IsReady)

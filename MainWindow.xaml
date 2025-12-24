@@ -6,10 +6,105 @@
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:local="clr-namespace:KlarfReviewTool"
         mc:Ignorable="d"
-        Title="MainWindow" Height="800" Width="1000">
+        Title="Klarf Review Tool" Height="1000" Width="1000"
+        Background="#F5F5F5">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
+    <Window.Resources>
+        <!-- 버튼 스타일 -->
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#4A90E2" Offset="0"/>
+                        <GradientStop Color="#357ABD" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="6" 
+                                Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#40000000" Direction="270" ShadowDepth="2" BlurRadius="4" Opacity="0.3"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#5BA0F2" Offset="0"/>
+                                <GradientStop Color="#468ACD" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#3A80D2" Offset="0"/>
+                                <GradientStop Color="#256AAD" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- 네비게이션 버튼 스타일 -->
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="8"
+                                Padding="5">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#20000000" Direction="270" ShadowDepth="1" BlurRadius="3" Opacity="0.2"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F0F0F0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- 카드 스타일 -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#20000000" Direction="270" ShadowDepth="2" BlurRadius="8" Opacity="0.15"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
@@ -19,55 +114,138 @@
             <RowDefinition/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Grid Grid.Row="1">
+
+        <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource CardStyle}" Margin="10" ClipToBounds="True">
+            <StackPanel>
+                <TextBlock Text="🗺️ Wafer Map" FontSize="13" FontWeight="SemiBold" Margin="10,10,10,5" Foreground="#2C3E50"/>
+                <Canvas x:Name="waferMap" Width="440" Height="360" MouseDown="WaferMap_Mousedown" Background="#FAFAFA">
+                    <Canvas.LayoutTransform>
+                        <ScaleTransform ScaleX="1" ScaleY="-1"/>
+                    </Canvas.LayoutTransform>
+                    <ItemsControl ItemsSource="{Binding WaferMapElements}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Canvas>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="10" ClipToBounds="True">
+            <StackPanel>
+                <TextBlock Text="🖼️ Defect Image" FontSize="13" FontWeight="SemiBold" Margin="10,10,10,5" Foreground="#2C3E50"/>
+                <Canvas x:Name="MainCanvas" Width="440" Height="360" Background="#FAFAFA">
+                    <Image Name="ImageBox2" Width="440" Height="360" Source="{Binding ImageSource}" 
+                           RenderTransformOrigin="0.5,0.5" MouseDown="ImageBox2_MouseDown" MouseMove="ImageBox2_MouseMove">
+                        <Image.RenderTransform>
+                            <ScaleTransform x:Name="imageScaleTransform" ScaleX="{Binding ElementName=zoomSlider, Path=Value}" 
+                                    ScaleY="{Binding ElementName=zoomSlider, Path=Value}" />
+                        </Image.RenderTransform>
+                    </Image>
+                    <Rectangle x:Name="SelectionRectangle" Stroke="#2196F3" StrokeThickness="2" 
+                           StrokeDashArray="3,3" Fill="#2196F333" Visibility="Collapsed" MouseUp="ImageBox2_MouseUp"/>
+                </Canvas>
+                <StackPanel Orientation="Horizontal" Margin="10,5">
+                    <TextBlock Text="🔍 Zoom:" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#7F8C8D"/>
+                    <Slider x:Name="zoomSlider" Minimum="0.1" Maximum="3.0" Value="1.0" Width="200" 
+                        VerticalAlignment="Center" TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                    <TextBlock Text="{Binding ElementName=zoomSlider, Path=Value, StringFormat={}{0:F1}x}" 
+                           FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" 
+                           Foreground="#2C3E50" FontWeight="SemiBold" MinWidth="35"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="3*"/>
             </Grid.RowDefinitions>
-            <Grid Grid.Row="0">
+            <Grid Grid.Row="0" Margin="10,10,10,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="0">
-                    <Button Content="Open Done Folder" Grid.Column="0" Command="{Binding OpenFileCommand}"/>
-                </Border>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="1">
-                    <Button Content="Save All Images" Grid.Column="1" Command="{Binding SaveFileCommand}"/>
-                </Border>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="2">
-                    <Button Content="Refresh" Grid.Column="2" Command="{Binding RefreshCommand}"/>
-                </Border>
+                <Button Content="📁 Open Klarf File" Grid.Column="0" Command="{Binding OpenFileCommand}" Style="{StaticResource ModernButtonStyle}"/>
+                <Button Content="💾 Save Images" Grid.Column="2" Command="{Binding SaveFileCommand}" Style="{StaticResource ModernButtonStyle}"/>
+                <Button Content="🔄 Refresh" Grid.Column="4" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}"/>
             </Grid>
-            <Grid Grid.Row="1">
+            <Grid Grid.Row="1" Margin="10,5,10,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="3*"/>
                 </Grid.ColumnDefinitions>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="1" Grid.Column="0"/>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="1" Grid.Column="1"/>
-                <Grid Grid.Row="1" Grid.Column="0">
-                    <TreeView ItemsSource="{Binding Drives}" SelectedItemChanged="TreeView_SelectedItemChanged" BorderBrush="LightGray" BorderThickness="1">
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <TreeView ItemsSource="{Binding Drives}" SelectedItemChanged="TreeView_SelectedItemChanged" 
+                              BorderThickness="0" Background="Transparent">
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                <TextBlock Text="{Binding Name}" FontSize="10"/>
+                                <TextBlock Text="{Binding Name}" FontSize="11" Padding="2"/>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="Foreground" Value="#333333"/>
+                                <Setter Property="FontSize" Value="11"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                        <Setter Property="Foreground" Value="#1976D2"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
                     </TreeView>
-                </Grid>
-                <Grid Grid.Row="1" Grid.Column="1">
-                    <ListView ItemsSource="{Binding Files}" Margin="10">
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <ListView Name="FilesListView" ItemsSource="{Binding Files}" BorderThickness="0" 
+                              MouseDoubleClick="FilesListView_MouseDoubleClick">
                         <ListView.View>
                             <GridView>
-                                <GridViewColumn Header="File Name" DisplayMemberBinding="{Binding Name}" Width="200"/>
-                                <GridViewColumn Header="Last Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150"/>
+                                <GridViewColumn Header="File Name" DisplayMemberBinding="{Binding Name}" Width="200">
+                                    <GridViewColumn.HeaderContainerStyle>
+                                        <Style TargetType="GridViewColumnHeader">
+                                            <Setter Property="Background" Value="#F5F5F5"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                        </Style>
+                                    </GridViewColumn.HeaderContainerStyle>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Last Modified" DisplayMemberBinding="{Binding LastWriteTime}" Width="150">
+                                    <GridViewColumn.HeaderContainerStyle>
+                                        <Style TargetType="GridViewColumnHeader">
+                                            <Setter Property="Background" Value="#F5F5F5"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                        </Style>
+                                    </GridViewColumn.HeaderContainerStyle>
+                                </GridViewColumn>
                             </GridView>
                         </ListView.View>
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="Padding" Value="8,4"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F0F7FF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#E3F2FD"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListView.ItemContainerStyle>
                     </ListView>
-                </Grid>
+                </Border>
             </Grid>
         </Grid>
+
         <Grid Grid.Row="1" Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition/>
@@ -78,13 +256,27 @@
                     <ColumnDefinition/>
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Sample Information" Grid.Row="1" Grid.Column="1" FontSize="15" Margin="10,10,0,0"/>
-                    <TextBlock Text="File Timestamp : 08-18-2023 16:19:42" Grid.Row="1" Grid.Column="1" FontSize="10" Width="248" HorizontalAlignment="Left" Margin="10,10,0,0"/>
-                    <TextBlock Text="WaferID : **" Grid.Row="1" Grid.Column="1" FontSize="10" Margin="10,10,0,0"/>
-                    <TextBlock Text="LotID : LotID-CassetteID" Grid.Row="1" Grid.Column="1" FontSize="10" Margin="10,10,0,0"/>
-                    <TextBlock Text="DeviceID :" Grid.Row="1" Grid.Column="1" FontSize="10" Margin="10,10,0,0"/>
-                </StackPanel>
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="10">
+                    <StackPanel>
+                        <TextBlock Text="📋 Sample Information" FontSize="16" FontWeight="Bold" Margin="0,0,0,15" Foreground="#2C3E50"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Text="File Timestamp:" FontSize="11" FontWeight="SemiBold" Foreground="#7F8C8D" Width="120"/>
+                            <TextBlock Text="08-18-2023 16:19:42" FontSize="11" Foreground="#2C3E50"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Text="WaferID:" FontSize="11" FontWeight="SemiBold" Foreground="#7F8C8D" Width="120"/>
+                            <TextBlock Text="**" FontSize="11" Foreground="#2C3E50"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Text="LotID:" FontSize="11" FontWeight="SemiBold" Foreground="#7F8C8D" Width="120"/>
+                            <TextBlock Text="LotID-CassetteID" FontSize="11" Foreground="#2C3E50"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <TextBlock Text="DeviceID:" FontSize="11" FontWeight="SemiBold" Foreground="#7F8C8D" Width="120"/>
+                            <TextBlock Text="-" FontSize="11" Foreground="#2C3E50"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
                 <Grid Grid.Column="1">
                     <Grid.RowDefinitions>
                         <RowDefinition/>
@@ -96,87 +288,219 @@
                         <ColumnDefinition Width="3*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Command="{Binding NextDieCommand}" Grid.Row="0" Grid.Column="2" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Right.png" Width="40" Height="40"/>
+                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="5">
+                        <TextBlock Text="{Binding CurrentDieInfo}" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#2C3E50"/>
+                    </Border>
+                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="5">
+                        <TextBlock Text="{Binding CurrentDefectInDieInfo}" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#2C3E50"/>
+                    </Border>
+                    <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource CardStyle}" Margin="5">
+                        <TextBlock Text="{Binding CurrentDefectInfo}" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#2C3E50"/>
+                    </Border>
+                    <Button Command="{Binding NextDieCommand}" Grid.Row="0" Grid.Column="2" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Right.png" Width="35" Height="35"/>
                     </Button>
-                    <Button Command="{Binding NextDefectInDieCommand}" Grid.Row="1" Grid.Column="2" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Right.png" Width="40" Height="40"/>
+                    <Button Command="{Binding NextDefectInDieCommand}" Grid.Row="1" Grid.Column="2" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Right.png" Width="35" Height="35"/>
                     </Button>
-                    <Button Command="{Binding NextAllDefectCommand}" Grid.Row="2" Grid.Column="2" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Right.png" Width="40" Height="40"/>
+                    <Button Command="{Binding NextAllDefectCommand}" Grid.Row="2" Grid.Column="2" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Right.png" Width="35" Height="35"/>
                     </Button>
-                    <Button Command="{Binding PrevDieCommand}" Grid.Row="0" Grid.Column="0" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Left.png" Width="40" Height="40"/>
+                    <Button Command="{Binding PrevDieCommand}" Grid.Row="0" Grid.Column="0" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Left.png" Width="35" Height="35"/>
                     </Button>
-                    <Button Command="{Binding PrevDefectInDieCommand}" Grid.Row="1" Grid.Column="0" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Left.png" Width="40" Height="40"/>
+                    <Button Command="{Binding PrevDefectInDieCommand}" Grid.Row="1" Grid.Column="0" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Left.png" Width="35" Height="35"/>
                     </Button>
-                    <Button Command="{Binding PrevAllDefectCommand}" Grid.Row="2" Grid.Column="0" Background="White" FontSize="20">
-                        <Image Source="D:\source\3차 과제\KlarfReviewTool\Tool\KlarfReviewTool\Image\Left.png" Width="40" Height="40"/>
+                    <Button Command="{Binding PrevAllDefectCommand}" Grid.Row="2" Grid.Column="0" Style="{StaticResource NavButtonStyle}">
+                        <Image Source="C:\psj\ATI\KlarfReviewTool\Image\Left.png" Width="35" Height="35"/>
                     </Button>
-                    <TextBlock Text="{Binding CurrentDieInfo}" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="15"/>
-                    <TextBlock Text="{Binding CurrentDefectInDieInfo}" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="15"/>
-                    <TextBlock Text="{Binding CurrentDefectInfo}"  Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="15"/>
                 </Grid>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="0"/>
-                <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="1"/>
             </Grid>
-            <Grid Grid.Row="1">
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="10">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                    <ListView Name="DefectListView" ItemsSource="{Binding DefectList.Defects}" SelectedItem="{Binding SelectedDefect, Mode=TwoWay}" DisplayMemberPath="DefectID">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Defect ID" DisplayMemberBinding="{Binding DefectID}" />
-                                <GridViewColumn Header="X Relative" DisplayMemberBinding="{Binding XRel}" />
-                                <GridViewColumn Header="Y Relative" DisplayMemberBinding="{Binding YRel}" />
-                                <GridViewColumn Header="X Index" DisplayMemberBinding="{Binding XIndex}" />
-                                <GridViewColumn Header="Y Index" DisplayMemberBinding="{Binding YIndex}" />
-                                <GridViewColumn Header="X Size" DisplayMemberBinding="{Binding XSize}" />
-                                <GridViewColumn Header="Y Size" DisplayMemberBinding="{Binding YSize}" />
-                                <GridViewColumn Header="Defect Area" DisplayMemberBinding="{Binding DefectArea}" />
-                                <GridViewColumn Header="D Size" DisplayMemberBinding="{Binding DSize}" />
-                                <GridViewColumn Header="Class Number" DisplayMemberBinding="{Binding ClassNumber}" />
-                                <GridViewColumn Header="Test" DisplayMemberBinding="{Binding Test}" />
-                                <GridViewColumn Header="Cluster Number" DisplayMemberBinding="{Binding ClusterNumber}" />
-                                <GridViewColumn Header="Rough Bin Number" DisplayMemberBinding="{Binding RoughBinNumber}" />
-                                <GridViewColumn Header="Fine Bin Number" DisplayMemberBinding="{Binding FineBinNumber}" />
-                                <GridViewColumn Header="Review Sample" DisplayMemberBinding="{Binding ReviewSample}" />
-                                <GridViewColumn Header="Image Count" DisplayMemberBinding="{Binding ImageCount}" />
-                                <GridViewColumn Header="Image List" DisplayMemberBinding="{Binding ImageList}" />
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                </ScrollViewer>
-            </Grid>
+                    <ListView Name="DefectListView" ItemsSource="{Binding DefectList.Defects}" 
+                              SelectedItem="{Binding SelectedDefect, Mode=TwoWay}" 
+                              DisplayMemberPath="DefectID" BorderThickness="0">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Defect ID" DisplayMemberBinding="{Binding DefectID}" Width="80">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="X Relative" DisplayMemberBinding="{Binding XRel, StringFormat=F2}" Width="90">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Y Relative" DisplayMemberBinding="{Binding YRel, StringFormat=F2}" Width="90">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="X Index" DisplayMemberBinding="{Binding XIndex}" Width="70">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Y Index" DisplayMemberBinding="{Binding YIndex}" Width="70">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="X Size" DisplayMemberBinding="{Binding XSize, StringFormat=F2}" Width="80">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Y Size" DisplayMemberBinding="{Binding YSize, StringFormat=F2}" Width="80">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Defect Area" DisplayMemberBinding="{Binding DefectArea, StringFormat=F2}" Width="100">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="D Size" DisplayMemberBinding="{Binding DSize, StringFormat=F2}" Width="80">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Class Number" DisplayMemberBinding="{Binding ClassNumber}" Width="100">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Test" DisplayMemberBinding="{Binding Test}" Width="60">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Cluster Number" DisplayMemberBinding="{Binding ClusterNumber}" Width="110">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Rough Bin" DisplayMemberBinding="{Binding RoughBinNumber}" Width="90">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Fine Bin" DisplayMemberBinding="{Binding FineBinNumber}" Width="80">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Review Sample" DisplayMemberBinding="{Binding ReviewSample}" Width="110">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Image Count" DisplayMemberBinding="{Binding ImageCount}" Width="100">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Image List" DisplayMemberBinding="{Binding ImageList}" Width="100">
+                                        <GridViewColumn.HeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background" Value="#F5F5F5"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="8,5"/>
+                                            </Style>
+                                        </GridViewColumn.HeaderContainerStyle>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Padding" Value="8,4"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#F0F7FF"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#E3F2FD"/>
+                                            <Setter Property="Foreground" Value="#1976D2"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+                    </ScrollViewer>
+                </Border>
         </Grid>
-        <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="0">
-            <Canvas x:Name="waferMap" Width="440" Height="360" MouseDown="WaferMap_Mousedown">
-                <Canvas.LayoutTransform>
-                    <ScaleTransform ScaleX="1" ScaleY="-1"/>
-                </Canvas.LayoutTransform>
-                <ItemsControl ItemsSource="{Binding WaferMapElements}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </Canvas>
-        </Border>
-        <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="0" Grid.Column="1">
-            <Canvas x:Name="MainCanvas" Grid.Row="0" Grid.Column="1" Width="440" Height="360">
-                <Image Name="ImageBox2" Width="440" Height="360" Source="{Binding ImageSource}" RenderTransformOrigin="0.5,0.5" MouseDown="ImageBox2_MouseDown" MouseMove="ImageBox2_MouseMove">
-                    <Image.RenderTransform>
-                        <ScaleTransform x:Name="imageScaleTransform" ScaleX="{Binding ElementName=zoomSlider, Path=Value}" 
-                                    ScaleY="{Binding ElementName=zoomSlider, Path=Value}" />
-                    </Image.RenderTransform>
-                </Image>
-                <Rectangle x:Name="SelectionRectangle" Stroke="Blue" StrokeThickness="2" Visibility="Collapsed" MouseUp="ImageBox2_MouseUp"/>
-            </Canvas>
-        </Border>
-        
-        <Slider x:Name="zoomSlider" Grid.Row="0" Grid.Column="1" Minimum="0.1" Maximum="3.0" Value="1.0" HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="200" />
-        <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="1" Grid.Column="0"/>
-        <Border ClipToBounds="True" BorderBrush="Red" BorderThickness="2" Grid.Row="1" Grid.Column="1"/>
     </Grid>
 </Window>   
