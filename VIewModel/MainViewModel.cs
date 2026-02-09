@@ -25,7 +25,7 @@ namespace KlarfReviewTool
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        public string tiffFilePath = @"C:\psj\ATI\KlarfReviewTool\Klarf\Klarf Format.tif";
+        public string tiffFilePath = @"D:\Klarf\Klarf Format.tif";
 
         public Defectlist DefectList { get; set; } = new Defectlist();
         public Dielist DieList { get; set; } = new Dielist();
