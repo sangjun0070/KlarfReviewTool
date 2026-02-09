@@ -1,4 +1,4 @@
-﻿using KlarfReviewTool.Model;
+using KlarfReviewTool.Model;
 using KlarfReviewTool.VIewModel;
 using System;
 using System.Collections.Generic;
@@ -282,10 +282,10 @@ namespace KlarfReviewTool
             DrawWaferMap();
             if (DefectList.Defects.Count > 0)
             {
-                int defectID = DefectList.Defects[0].DefectID;
-
-                ImageSource = Tool.DefectIDandFrameIndex(DefectList, tiffFilePath, defectID);
-
+                // 첫 번째 Defect를 선택해서 이미지와 인덱스 정보를 모두 초기화
+                currentDieIndex = 0;
+                currentDefectInDieIndex = 0;
+                SelectedDefect = DefectList.Defects[0];
             }
         }
 
@@ -346,14 +346,12 @@ namespace KlarfReviewTool
                 // 웨이퍼 맵 그리기
                 DrawWaferMap();
                 
-                // 첫 번째 Defect 이미지 표시
+                // 첫 번째 Defect를 선택해서 이미지와 인덱스 정보를 모두 초기화
                 if (DefectList.Defects.Count > 0)
                 {
-                    int defectID = DefectList.Defects[0].DefectID;
-                    if (!string.IsNullOrEmpty(tiffFilePath) && File.Exists(tiffFilePath))
-                    {
-                        ImageSource = Tool.DefectIDandFrameIndex(DefectList, tiffFilePath, defectID);
-                    }
+                    currentDieIndex = 0;
+                    currentDefectInDieIndex = 0;
+                    SelectedDefect = DefectList.Defects[0];
                 }
             }
             catch (Exception ex)
@@ -442,13 +440,19 @@ namespace KlarfReviewTool
             if (SelectedDie == null)
                 return;
 
-            var defectsInDie = DefectList.Defects.Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex).ToList();
+            var defectsInDie = DefectList.Defects
+                .Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex)
+                .ToList();
+
+            if (defectsInDie.Count == 0 || SelectedDefect == null)
+                return;
 
             currentDefectIndex = defectsInDie.IndexOf(SelectedDefect);
 
-            if (currentDefectIndex < defectsInDie.Count - 1)
+            if (currentDefectIndex >= 0 && currentDefectIndex < defectsInDie.Count - 1)
             {
-                currentDefectInDieIndex += 1;
+                // 현재 다이 내에서 다음 불량으로 이동
+                currentDefectInDieIndex = currentDefectIndex + 1;
                 SelectedDefect = defectsInDie[currentDefectIndex + 1];
             }
         }
@@ -458,13 +462,19 @@ namespace KlarfReviewTool
             if (SelectedDie == null)
                 return;
 
-            var defectsInDie = DefectList.Defects.Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex).ToList();
+            var defectsInDie = DefectList.Defects
+                .Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex)
+                .ToList();
+
+            if (defectsInDie.Count == 0 || SelectedDefect == null)
+                return;
 
             currentDefectIndex = defectsInDie.IndexOf(SelectedDefect);
 
             if (currentDefectIndex > 0)
             {
-                currentDefectInDieIndex -= 1;
+                // 현재 다이 내에서 이전 불량으로 이동
+                currentDefectInDieIndex = currentDefectIndex - 1;
                 SelectedDefect = defectsInDie[currentDefectIndex - 1];
             }
         }
@@ -472,46 +482,118 @@ namespace KlarfReviewTool
 
         public void NextAllDefectbtn_Click(object obj)
         {
-            IsNextClick = true;
-            currentDefectInDieIndex++;
+            if (SelectedDefect == null || DefectList.Defects.Count == 0 || SelectedDie == null)
+                return;
+
             var allDefects = DefectList.Defects;
-            var defectsInDie = DefectList.Defects.Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex).ToList();
-            currentDefectIndex = allDefects.IndexOf(SelectedDefect);
-            if (currentDefectIndex < allDefects.Count)
+            int currentIndex = allDefects.IndexOf(SelectedDefect);
+
+            // 더 이상 다음 불량이 없으면 아무 것도 하지 않음
+            if (currentIndex < 0 || currentIndex >= allDefects.Count - 1)
             {
-                SelectedDefect = allDefects[currentDefectIndex + 1];
-                if (IsDieChanged == true)
+                if (TotalDefectInSelectedDie.Count > 0)
+                {
+                    currentDefectInDieIndex = Math.Min(currentDefectInDieIndex, TotalDefectInSelectedDie.Count - 1);
+                    currentDefectInDieIndex = Math.Max(currentDefectInDieIndex, 0);
+                }
+                else
                 {
                     currentDefectInDieIndex = 0;
-                    IsDieChanged = false;
+                }
+
+                CurrentDefectInDieInfo = TotalDefectCount > 0 && TotalDefectInSelectedDie.Count > 0
+                    ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}"
+                    : " ";
+                return;
+            }
+
+            // 다음 전체 불량으로 이동
+            SelectedDefect = allDefects[currentIndex + 1];
+
+            if (IsDieChanged)
+            {
+                // 다이가 바뀐 경우, 새 다이의 첫 번째 불량으로 시작
+                currentDefectInDieIndex = 0;
+                IsDieChanged = false;
+            }
+            else
+            {
+                if (TotalDefectInSelectedDie.Count > 0)
+                {
+                    currentDefectInDieIndex = Math.Min(currentDefectInDieIndex + 1, TotalDefectInSelectedDie.Count - 1);
+                }
+                else
+                {
+                    currentDefectInDieIndex = 0;
                 }
             }
-            CurrentDefectInDieInfo = TotalDefectCount > 0 ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}" : " ";
+
+            CurrentDefectInDieInfo = TotalDefectCount > 0 && TotalDefectInSelectedDie.Count > 0
+                ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}"
+                : " ";
         }
 
         public void PrevAllDefectbtn_Click(object obj)
         {
-            currentDefectInDieIndex--;
+            if (SelectedDefect == null || DefectList.Defects.Count == 0 || SelectedDie == null)
+                return;
+
             var allDefects = DefectList.Defects;
-            var defectsInDie = DefectList.Defects.Where(d => d.XIndex == SelectedDie.XIndex && d.YIndex == SelectedDie.YIndex).ToList();
             int currentIndex = allDefects.IndexOf(SelectedDefect);
-            if (currentIndex > 0)
+
+            // 더 이상 이전 불량이 없으면 아무 것도 하지 않음
+            if (currentIndex <= 0)
             {
-                SelectedDefect = allDefects[currentIndex - 1];
-                if (IsDieChanged == true)
+                if (TotalDefectInSelectedDie.Count > 0)
                 {
-                    currentDefectInDieIndex = TotalDefectInSelectedDie.Count - 1;
-                    IsDieChanged = false;
+                    currentDefectInDieIndex = Math.Max(currentDefectInDieIndex, 0);
+                    currentDefectInDieIndex = Math.Min(currentDefectInDieIndex, TotalDefectInSelectedDie.Count - 1);
+                }
+                else
+                {
+                    currentDefectInDieIndex = 0;
+                }
+
+                CurrentDefectInDieInfo = TotalDefectCount > 0 && TotalDefectInSelectedDie.Count > 0
+                    ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}"
+                    : " ";
+                return;
+            }
+
+            // 이전 전체 불량으로 이동
+            SelectedDefect = allDefects[currentIndex - 1];
+
+            if (IsDieChanged)
+            {
+                // 다이가 바뀐 경우, 새 다이의 마지막 불량으로 시작
+                currentDefectInDieIndex = TotalDefectInSelectedDie.Count > 0
+                    ? TotalDefectInSelectedDie.Count - 1
+                    : 0;
+                IsDieChanged = false;
+            }
+            else
+            {
+                if (TotalDefectInSelectedDie.Count > 0)
+                {
+                    currentDefectInDieIndex = Math.Max(currentDefectInDieIndex - 1, 0);
+                }
+                else
+                {
+                    currentDefectInDieIndex = 0;
                 }
             }
-            CurrentDefectInDieInfo = TotalDefectCount > 0 ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}" : " ";
+
+            CurrentDefectInDieInfo = TotalDefectCount > 0 && TotalDefectInSelectedDie.Count > 0
+                ? $"{currentDefectInDieIndex + 1} / {TotalDefectInSelectedDie.Count}"
+                : " ";
         }
 
         // 원하는 폴더 경로들을 여기에 설정하세요
         // 여러 폴더를 지정하려면 배열에 추가하세요
+        // 기본 시작 위치를 D 드라이브로 설정
         private string[] _targetFolderPaths = new string[]
         {
-            @"C:\psj\ATI"
+            @"D:\"
         };
 
         public void LoadDrives()
